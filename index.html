@@ -1,0 +1,443 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Free Word Counter | Road to Top 5</title>
+<meta name="description" content="Free word counter: paste your text to count words, characters, sentences and paragraphs, check reading time, readability and keyword density.">
+<style>
+/* ===== Brand colours ===== */
+:root {
+	--mint: #54ac94;
+	--mint-dark: #3f8f79;
+	--mint-soft: #eaf6f2;
+	--navy: #1f3558;
+	--navy-2: #26466f;
+	--text: #111827;
+	--text-2: #374151;
+	--muted: #6b7280;
+	--line: #e5e7eb;
+	--soft: #f7f9fb;
+	--good: #0ca30c;
+	--warn: #fab219;
+	--bad: #d03b3b;
+}
+html, body { margin: 0; padding: 0; background: transparent; }
+body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; color: var(--text); -webkit-font-smoothing: antialiased; font-size: 16px; line-height: 1.55; }
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+h1, h2, h3 { color: var(--navy); line-height: 1.25; margin: 0; }
+
+.wc { width: 100%; padding: 24px; background: #fff; border: 1px solid var(--line); border-radius: 18px; }
+
+/* header */
+.wc-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-bottom: 18px; }
+.wc-title { font-size: 26px; }
+.wc-sub { margin: 4px 0 0; color: var(--muted); font-size: 15px; }
+.wc-private { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--navy); background: var(--mint-soft); padding: 6px 12px; border-radius: 99px; font-weight: 600; }
+
+/* stat tiles */
+.wc-tiles { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; margin-bottom: 18px; }
+.wc-tile { position: relative; overflow: hidden; padding: 14px 16px; border: 1px solid var(--line); border-radius: 14px; background: #fff; }
+.wc-tile::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 5px; background: var(--mint); }
+.wc-tile-num { display: block; font-size: 28px; font-weight: 800; color: var(--navy); line-height: 1.1; font-variant-numeric: tabular-nums; }
+.wc-tile-label { display: block; font-size: 13px; color: var(--muted); margin-top: 4px; }
+.wc-tile-hero { background: linear-gradient(135deg, var(--navy), var(--navy-2)); border-color: transparent; }
+.wc-tile-hero::before { background: var(--mint); }
+.wc-tile-hero .wc-tile-num { color: #fff; font-size: 34px; }
+.wc-tile-hero .wc-tile-label { color: rgba(255,255,255,.8); }
+
+/* main layout */
+.wc-main { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(300px, 1fr); gap: 18px; align-items: start; }
+
+.wc-editor { border: 1px solid var(--line); border-radius: 14px; overflow: hidden; background: #fff; }
+.wc-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 12px; background: var(--soft); border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.wc-live { font-size: 14px; color: var(--text-2); }
+.wc-live strong { color: var(--navy); }
+.wc-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.wc-btn { font: inherit; font-size: 14px; font-weight: 700; padding: 8px 14px; border-radius: 9px; cursor: pointer; border: 1px solid var(--line); background: #fff; color: var(--navy); transition: filter .15s, box-shadow .15s; }
+.wc-btn:hover { box-shadow: 0 2px 8px rgba(31,53,88,.1); }
+.wc-btn-primary { background: var(--mint); color: #fff; border-color: var(--mint); }
+.wc-btn-primary:hover { filter: brightness(1.06); box-shadow: 0 6px 16px rgba(84,172,148,.35); }
+textarea.wc-input {
+	display: block; width: 100%; min-height: 460px; resize: vertical;
+	padding: 18px; border: 0; outline: none;
+	font: inherit; font-size: 17px; line-height: 1.7; color: var(--text);
+	background: #fff;
+}
+textarea.wc-input:focus { box-shadow: inset 0 0 0 2px var(--mint); }
+textarea.wc-input::placeholder { color: #9ca3af; }
+
+/* sidebar cards */
+.wc-side { display: grid; gap: 14px; }
+.wc-card { border: 1px solid var(--line); border-radius: 14px; background: #fff; padding: 16px; }
+.wc-card-title { font-size: 16px; margin-bottom: 10px; }
+.wc-rows { display: grid; gap: 8px; margin: 0; }
+.wc-rows div { display: flex; justify-content: space-between; gap: 10px; font-size: 14px; }
+.wc-rows dt { color: var(--text-2); }
+.wc-rows dd { margin: 0; font-weight: 700; color: var(--navy); font-variant-numeric: tabular-nums; }
+
+/* readability */
+.wc-read { display: flex; align-items: center; gap: 14px; }
+.wc-read-score { flex: 0 0 64px; height: 64px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 800; color: #fff; background: var(--muted); }
+.wc-read-label { font-weight: 700; color: var(--navy); }
+.wc-read-note { font-size: 13px; color: var(--muted); margin: 2px 0 0; }
+
+/* length limits */
+.wc-limit { margin-bottom: 10px; }
+.wc-limit:last-child { margin-bottom: 0; }
+.wc-limit-top { display: flex; justify-content: space-between; font-size: 14px; margin-bottom: 4px; }
+.wc-limit-top span:last-child { font-weight: 700; font-variant-numeric: tabular-nums; }
+.wc-track { height: 8px; background: #f0efec; border-radius: 99px; overflow: hidden; }
+.wc-fill { height: 100%; width: 0; border-radius: 99px; background: var(--mint); transition: width .2s; }
+.wc-fill.over { background: var(--bad); }
+.wc-over { color: var(--bad); }
+
+/* keyword density */
+.wc-tabs { display: inline-flex; background: var(--soft); border: 1px solid var(--line); border-radius: 9px; padding: 3px; margin-bottom: 10px; }
+.wc-tab { font: inherit; font-size: 13px; font-weight: 700; border: 0; background: none; padding: 5px 12px; border-radius: 7px; cursor: pointer; color: var(--text-2); }
+.wc-tab[aria-selected="true"] { background: #fff; color: var(--navy); box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+.wc-kw { list-style: none; margin: 0; padding: 0; display: grid; gap: 7px; }
+.wc-kw li { display: grid; grid-template-columns: minmax(0, 1fr) 90px 64px; gap: 10px; align-items: center; font-size: 14px; }
+.wc-kw-word { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text-2); }
+.wc-kw-bar { height: 8px; background: #f0efec; border-radius: 4px; overflow: hidden; }
+.wc-kw-bar i { display: block; height: 100%; background: var(--mint); border-radius: 0 4px 4px 0; }
+.wc-kw-val { text-align: right; font-weight: 700; color: var(--navy); font-variant-numeric: tabular-nums; font-size: 13px; }
+.wc-empty { color: var(--muted); font-size: 14px; margin: 0; }
+
+
+.wc-toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--navy); color: #fff; padding: 8px 14px; border-radius: 8px; font-size: 14px; }
+
+@media (max-width: 1100px) {
+	.wc-tiles { grid-template-columns: repeat(3, 1fr); }
+	.wc-main { grid-template-columns: 1fr; }
+	.wc-side { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+}
+@media (max-width: 600px) {
+	.wc { padding: 16px; border-radius: 12px; }
+	.wc-tiles { grid-template-columns: 1fr 1fr; }
+	.wc-title { font-size: 22px; }
+	textarea.wc-input { min-height: 300px; font-size: 16px; }
+}
+</style>
+</head>
+<body>
+<div class="wc" id="wc">
+	<div class="wc-head">
+		<div>
+			<h1 class="wc-title">Word Counter</h1>
+			<p class="wc-sub">Paste or type your text. Counts update as you type.</p>
+		</div>
+		<span class="wc-private">🔒 Your text never leaves your browser</span>
+	</div>
+
+	<div class="wc-tiles" aria-live="polite">
+		<div class="wc-tile wc-tile-hero"><span class="wc-tile-num" id="s-words">0</span><span class="wc-tile-label">Words</span></div>
+		<div class="wc-tile"><span class="wc-tile-num" id="s-chars">0</span><span class="wc-tile-label">Characters</span></div>
+		<div class="wc-tile"><span class="wc-tile-num" id="s-sentences">0</span><span class="wc-tile-label">Sentences</span></div>
+		<div class="wc-tile"><span class="wc-tile-num" id="s-paras">0</span><span class="wc-tile-label">Paragraphs</span></div>
+		<div class="wc-tile"><span class="wc-tile-num" id="s-read">0 sec</span><span class="wc-tile-label">Reading time</span></div>
+		<div class="wc-tile"><span class="wc-tile-num" id="s-speak">0 sec</span><span class="wc-tile-label">Speaking time</span></div>
+	</div>
+
+	<div class="wc-main">
+		<div class="wc-editor">
+			<div class="wc-toolbar">
+				<span class="wc-live"><strong id="l-words">0</strong> words · <strong id="l-chars">0</strong> characters</span>
+				<div class="wc-actions">
+					<button type="button" class="wc-btn" id="b-copy">Copy text</button>
+					<button type="button" class="wc-btn" id="b-clear">Clear</button>
+				</div>
+			</div>
+			<label for="wc-text" class="wc-sr" style="position:absolute;left:-9999px">Your text</label>
+			<textarea id="wc-text" class="wc-input" placeholder="Paste or start typing your text here…" spellcheck="true"></textarea>
+		</div>
+
+		<aside class="wc-side">
+			<section class="wc-card">
+				<h3 class="wc-card-title">Details</h3>
+				<dl class="wc-rows">
+					<div><dt>Characters (no spaces)</dt><dd id="d-nospace">0</dd></div>
+					<div><dt>Unique words</dt><dd id="d-unique">0</dd></div>
+					<div><dt>Avg. words per sentence</dt><dd id="d-wps">0</dd></div>
+					<div><dt>Avg. word length</dt><dd id="d-wlen">0</dd></div>
+					<div><dt>Longest sentence</dt><dd id="d-long">0 words</dd></div>
+					<div><dt>Lines</dt><dd id="d-lines">0</dd></div>
+				</dl>
+			</section>
+
+			<section class="wc-card">
+				<h3 class="wc-card-title">Readability</h3>
+				<div class="wc-read">
+					<div class="wc-read-score" id="r-score">–</div>
+					<div>
+						<div class="wc-read-label" id="r-label">Add a few sentences</div>
+						<p class="wc-read-note" id="r-note">Flesch Reading Ease (English). 60+ is easy for most readers.</p>
+					</div>
+				</div>
+			</section>
+
+			<section class="wc-card">
+				<h3 class="wc-card-title">SEO &amp; social length checks</h3>
+				<p class="wc-read-note" style="margin:-6px 0 10px">For short copy: paste a title, meta description or post to check it fits.</p>
+				<div id="limits"></div>
+			</section>
+
+			<section class="wc-card">
+				<h3 class="wc-card-title">Keyword density</h3>
+				<div class="wc-tabs" role="tablist">
+					<button type="button" class="wc-tab" role="tab" aria-selected="true" data-n="1">1 word</button>
+					<button type="button" class="wc-tab" role="tab" aria-selected="false" data-n="2">2 words</button>
+					<button type="button" class="wc-tab" role="tab" aria-selected="false" data-n="3">3 words</button>
+				</div>
+				<ul class="wc-kw" id="kw"></ul>
+			</section>
+		</aside>
+	</div>
+
+</div>
+<div class="wc-toast" id="toast" hidden></div>
+
+<script>
+(function () {
+	'use strict';
+
+	var text = document.getElementById('wc-text');
+	var $ = function (id) { return document.getElementById(id); };
+	var fmt = new Intl.NumberFormat('en');
+	var hasSeg = typeof Intl !== 'undefined' && typeof Intl.Segmenter === 'function';
+	var wordSeg = hasSeg ? new Intl.Segmenter(undefined, { granularity: 'word' }) : null;
+	var sentSeg = hasSeg ? new Intl.Segmenter(undefined, { granularity: 'sentence' }) : null;
+	var graphSeg = hasSeg ? new Intl.Segmenter(undefined, { granularity: 'grapheme' }) : null;
+
+	var LIMITS = [
+		{ label: 'Meta title', max: 60 },
+		{ label: 'Meta description', max: 160 },
+		{ label: 'X (Twitter) post', max: 280 },
+		{ label: 'LinkedIn post (before “see more”)', max: 210 }
+	];
+
+	var STOP = new Set(('a about above after again against all am an and any are as at be because been before being below between both but by can could did do does doing down during each few for from further had has have having he her here hers herself him himself his how i if in into is it its itself just me more most my myself no nor not now of off on once only or other our ours ourselves out over own same she should so some such than that the their theirs them themselves then there these they this those through to too under until up very was we were what when where which while who whom why will with would you your yours yourself yourselves also get got can’t can\'t don’t don\'t it’s it\'s i’m i\'m we’re we\'re you’re you\'re isn’t isn\'t').split(' '));
+
+	/* ---------- counting ---------- */
+	/* Counts like Word / Google Docs: "don't", "follow-up", "3.5", URLs and emails are one word each. */
+	var WORD_RE = /(?:https?:\/\/|www\.)[^\s]+|[^\s@]+@[^\s@]+\.[^\s@]+|[\p{L}\p{M}\p{N}]+(?:(?:['’\-‐]|(?<=\d)[.,:](?=\d))[\p{L}\p{M}\p{N}]+)*/gu;
+	var CJK = /[぀-ヿ㐀-鿿豈-﫿가-힯]/;
+	function words(str) {
+		var list = str.match(WORD_RE) || [];
+		/* Chinese/Japanese/Korean have no spaces: let the browser split those runs into words. */
+		if (wordSeg && CJK.test(str)) {
+			var out = list.filter(function (w) { return !CJK.test(w); });
+			for (var s of wordSeg.segment(str)) if (s.isWordLike && CJK.test(s.segment)) out.push(s.segment);
+			return out;
+		}
+		return list;
+	}
+	function charCount(str) {
+		if (graphSeg) { var n = 0; for (var _ of graphSeg.segment(str)) n++; return n; }
+		return Array.from(str).length;
+	}
+	function sentences(str) {
+		var list = [];
+		if (sentSeg) {
+			for (var s of sentSeg.segment(str)) if (/[\p{L}\p{N}]/u.test(s.segment)) list.push(s.segment.trim());
+		} else {
+			list = str.split(/(?<=[.!?…])\s+|\n+/).filter(function (x) { return /[\p{L}\p{N}]/u.test(x); });
+		}
+		/* A line break with no end punctuation (headings, bullets) also ends a sentence. */
+		var out = [];
+		list.forEach(function (s) { s.split(/\n+/).forEach(function (p) { if (/[\p{L}\p{N}]/u.test(p)) out.push(p.trim()); }); });
+		return out;
+	}
+	function syllables(w) {
+		w = w.toLowerCase().replace(/[^a-z]/g, '');
+		if (!w) return 0;
+		if (w.length <= 3) return 1;
+		w = w.replace(/(?:[^laeiouy]es|ed|[^laeiouy]e)$/, '').replace(/^y/, '');
+		var m = w.match(/[aeiouy]{1,2}/g);
+		return Math.max(1, m ? m.length : 1);
+	}
+	function duration(wordsN, wpm) {
+		var sec = Math.round((wordsN / wpm) * 60);
+		if (sec < 60) return sec + ' sec';
+		var m = Math.floor(sec / 60), s = sec % 60;
+		if (m < 60) return s ? m + ' min ' + s + ' sec' : m + ' min';
+		return Math.floor(m / 60) + ' hr ' + (m % 60) + ' min';
+	}
+
+	/* ---------- render ---------- */
+	var kwN = 1;
+	var last = { words: [] };
+
+	function update() {
+		var str = text.value;
+		var w = words(str);
+		var sents = sentences(str);
+		var chars = charCount(str);
+		var noSpace = charCount(str.replace(/\s+/g, ''));
+		var lines = str ? str.split(/\n/).filter(function (l) { return l.trim(); }).length : 0;
+		var paras = str.trim() ? str.split(/\n\s*\n+/).filter(function (p) { return /[\p{L}\p{N}]/u.test(p); }).length : 0;
+		/* Text pasted with single line breaks between paragraphs: count lines instead. */
+		if (paras <= 1 && lines > 1) paras = lines;
+
+		$('s-words').textContent = fmt.format(w.length);
+		$('l-words').textContent = fmt.format(w.length);
+		$('s-chars').textContent = fmt.format(chars);
+		$('l-chars').textContent = fmt.format(chars);
+		$('s-sentences').textContent = fmt.format(sents.length);
+		$('s-paras').textContent = fmt.format(paras);
+		$('s-read').textContent = duration(w.length, 238);
+		$('s-speak').textContent = duration(w.length, 150);
+
+		var lower = w.map(function (x) { return x.toLowerCase().replace(/’/g, "'"); });
+		var unique = new Set(lower).size;
+		var letters = w.reduce(function (n, x) { return n + x.length; }, 0);
+		var longest = 0;
+		sents.forEach(function (s) { longest = Math.max(longest, words(s).length); });
+		$('d-nospace').textContent = fmt.format(noSpace);
+		$('d-unique').textContent = fmt.format(unique);
+		$('d-wps').textContent = sents.length ? (w.length / sents.length).toFixed(1) : '0';
+		$('d-wlen').textContent = w.length ? (letters / w.length).toFixed(1) + ' chars' : '0';
+		$('d-long').textContent = longest + (longest === 1 ? ' word' : ' words');
+		$('d-lines').textContent = fmt.format(lines);
+
+		readability(w, sents);
+		limits(chars);
+		last.words = lower;
+		keywords();
+	}
+
+	function readability(w, sents) {
+		var box = $('r-score');
+		if (w.length < 30 || sents.length < 2) {
+			box.textContent = '–';
+			box.style.background = 'var(--muted)';
+			$('r-label').textContent = 'Add a few sentences';
+			$('r-note').textContent = 'Flesch Reading Ease (English). Needs about 30+ words.';
+			return;
+		}
+		var syl = w.reduce(function (n, x) { return n + syllables(x); }, 0);
+		var score = 206.835 - 1.015 * (w.length / sents.length) - 84.6 * (syl / w.length);
+		score = Math.max(0, Math.min(100, Math.round(score)));
+		var band =
+			score >= 80 ? ['Very easy', 'Readable by an 11-year-old.', 'var(--good)'] :
+			score >= 60 ? ['Easy to read', 'Plain English. Good for most web pages.', 'var(--mint-dark)'] :
+			score >= 50 ? ['Fairly difficult', 'Try shorter sentences and simpler words.', '#c98500'] :
+			score >= 30 ? ['Difficult', 'College level. Hard for most web readers.', '#e0662e'] :
+			['Very difficult', 'Academic level. Break it up and simplify.', 'var(--bad)'];
+		box.textContent = score;
+		box.style.background = band[2];
+		$('r-label').textContent = band[0];
+		$('r-note').textContent = band[1];
+	}
+
+	function limits(chars) {
+		var wrap = $('limits');
+		if (!wrap.childElementCount) {
+			LIMITS.forEach(function (l, i) {
+				var d = document.createElement('div');
+				d.className = 'wc-limit';
+				d.innerHTML = '<div class="wc-limit-top"><span></span><span></span></div><div class="wc-track"><div class="wc-fill"></div></div>';
+				d.querySelector('span').textContent = l.label;
+				wrap.appendChild(d);
+			});
+		}
+		LIMITS.forEach(function (l, i) {
+			var row = wrap.children[i];
+			var val = row.querySelectorAll('span')[1];
+			var fill = row.querySelector('.wc-fill');
+			var over = chars > l.max;
+			val.textContent = fmt.format(chars) + ' / ' + l.max;
+			val.className = over ? 'wc-over' : '';
+			fill.style.width = Math.min(100, (chars / l.max) * 100) + '%';
+			fill.classList.toggle('over', over);
+		});
+	}
+
+	function keywords() {
+		var list = $('kw');
+		list.innerHTML = '';
+		var w = last.words, n = kwN;
+		var counts = new Map(), total = 0;
+		for (var i = 0; i + n <= w.length; i++) {
+			var gram = w.slice(i, i + n);
+			if (n === 1 && (STOP.has(gram[0]) || /^\d+$/.test(gram[0]) || gram[0].length < 2)) continue;
+			if (n > 1 && (STOP.has(gram[0]) || STOP.has(gram[n - 1]))) continue;
+			var k = gram.join(' ');
+			counts.set(k, (counts.get(k) || 0) + 1);
+		}
+		total = w.length;
+		var top = Array.from(counts.entries()).filter(function (e) { return n === 1 || e[1] > 1; })
+			.sort(function (a, b) { return b[1] - a[1] || a[0].localeCompare(b[0]); }).slice(0, 10);
+		if (!top.length) {
+			var p = document.createElement('p');
+			p.className = 'wc-empty';
+			p.textContent = w.length ? 'No repeated ' + n + '-word phrases yet.' : 'Keywords appear here once you add text.';
+			list.appendChild(p);
+			return;
+		}
+		var max = top[0][1];
+		top.forEach(function (e) {
+			var li = document.createElement('li');
+			var word = document.createElement('span');
+			word.className = 'wc-kw-word';
+			word.textContent = e[0];
+			word.title = e[0];
+			var bar = document.createElement('span');
+			bar.className = 'wc-kw-bar';
+			var fill = document.createElement('i');
+			fill.style.width = (e[1] / max) * 100 + '%';
+			bar.appendChild(fill);
+			var val = document.createElement('span');
+			val.className = 'wc-kw-val';
+			val.textContent = e[1] + ' · ' + ((e[1] * n / total) * 100).toFixed(1) + '%';
+			li.appendChild(word); li.appendChild(bar); li.appendChild(val);
+			list.appendChild(li);
+		});
+	}
+
+	/* ---------- events ---------- */
+	var timer = null;
+	text.addEventListener('input', function () {
+		clearTimeout(timer);
+		timer = setTimeout(update, text.value.length > 50000 ? 250 : 30);
+	});
+	document.querySelectorAll('.wc-tab').forEach(function (t) {
+		t.addEventListener('click', function () {
+			document.querySelectorAll('.wc-tab').forEach(function (x) { x.setAttribute('aria-selected', x === t ? 'true' : 'false'); });
+			kwN = +t.getAttribute('data-n');
+			keywords();
+		});
+	});
+	function toast(msg) {
+		var el = $('toast');
+		el.textContent = msg;
+		el.hidden = false;
+		clearTimeout(toast.t);
+		toast.t = setTimeout(function () { el.hidden = true; }, 1600);
+	}
+	$('b-clear').addEventListener('click', function () { text.value = ''; update(); text.focus(); });
+	$('b-copy').addEventListener('click', function () {
+		if (!text.value) return toast('Nothing to copy yet');
+		var done = function () { toast('Text copied'); };
+		if (navigator.clipboard) navigator.clipboard.writeText(text.value).then(done, function () { text.select(); document.execCommand('copy'); done(); });
+		else { text.select(); document.execCommand('copy'); done(); }
+	});
+
+	/* ---------- iframe auto-height ---------- */
+	(function () {
+		var lastH = 0;
+		function send() {
+			var h = Math.ceil(document.documentElement.getBoundingClientRect().height);
+			if (h !== lastH) { lastH = h; try { window.parent.postMessage({ type: 'wc-height', height: h }, '*'); } catch (e) {} }
+		}
+		if ('ResizeObserver' in window) new ResizeObserver(send).observe(document.body);
+		window.addEventListener('load', send);
+		setInterval(send, 1000);
+	})();
+
+	update();
+})();
+</script>
+</body>
+</html>
